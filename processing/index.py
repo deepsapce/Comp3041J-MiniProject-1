@@ -5,7 +5,6 @@ import base64
 from datetime import datetime
 
 def parse_event(event):
-    # 1. 统一将 bytes 或 str 转换成 dict
     if isinstance(event, bytes):
         event = event.decode('utf-8')
     if isinstance(event, str):
@@ -14,30 +13,24 @@ def parse_event(event):
         except:
             return {}
 
-    # 2. 确保现在是字典
     if not isinstance(event, dict):
         return {}
 
-    # 3. 如果顶层直接包含 submission_id，直接返回
     if 'submission_id' in event:
         return event
 
-    # 4. 否则从 body 中提取
     body = event.get('body')
     if body is None:
         return {}
 
-    # 5. 如果 body 已经是字典，直接返回
     if isinstance(body, dict):
         return body
 
-    # 6. 处理 Base64 或二进制 body
     if event.get('isBase64Encoded', False):
         body = base64.b64decode(body).decode('utf-8')
     elif isinstance(body, bytes):
         body = body.decode('utf-8')
 
-    # 7. 将字符串 body 解析为 JSON
     try:
         return json.loads(body)
     except:
@@ -46,7 +39,6 @@ def parse_event(event):
 def apply_rules(submission_record):
     data = submission_record.get('data', {})
 
-    # 1. 检查必填字段
     required_fields = ['title', 'description', 'location', 'date', 'organiser']
     missing = [f for f in required_fields if not data.get(f)]
     if missing:
@@ -57,7 +49,6 @@ def apply_rules(submission_record):
             'note': f'Missing required field(s): {", ".join(missing)}'
         }
 
-    # 2. 计算类别和优先级（所有必填字段都存在）
     text = (data.get('title', '') + ' ' + data.get('description', '')).lower()
     if any(kw in text for kw in ['career', 'internship', 'recruitment']):
         category = 'OPPORTUNITY'
@@ -72,7 +63,6 @@ def apply_rules(submission_record):
         category = 'GENERAL'
         priority = 'NORMAL'
 
-    # 3. 检查日期格式和描述长度
     date_valid = False
     desc_valid = False
     errors = []
@@ -88,7 +78,6 @@ def apply_rules(submission_record):
     else:
         errors.append('Description must be at least 40 characters')
 
-    # 4. 决定最终状态和说明
     if date_valid and desc_valid:
         final_status = 'APPROVED'
         note = f'Approved as {category} with {priority} priority.'
