@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  data:
+    build: ./data_service
+    container_name: campus-data
+    ports:
+      - "5001:5001"
+    networks:
+      - campus-net
+    restart: unless-stopped
+
+  workflow:
+    build: ./workflow_service
+    container_name: campus-workflow
+    environment:
+      - DATA_SERVICE_URL=http://data:5001
+      - SERVERLESS_PROCESSING_URL=https://your-region.fc.aliyuncs.com/2016-08-15/proxy/your-service/event-function  # 替换为实际URL
+    ports:
+      - "5002:5002"
+    networks:
+      - campus-net
+    depends_on:
+      - data
+    restart: unless-stopped
+
+  presentation:
+    build: ./presentation_service
+    container_name: campus-presentation
+    environment:
+      - WORKFLOW_URL=http://workflow:5002
+      - DATA_SERVICE_URL=http://data:5001
+    ports:
+      - "5000:5000"
+    networks:
+      - campus-net
+    depends_on:
+      - workflow
+    restart: unless-stopped
+
+networks:
+  campus-net:
+    driver: bridge
